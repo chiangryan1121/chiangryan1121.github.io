@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D FPS Game</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 20px;
+            font-family: Arial, sans-serif;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <div id="score">Score: 0</div>
+    <script type="module">
+        import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.153.0/build/three.module.js';
+        import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.153.0/examples/jsm/controls/OrbitControls.js';
+
+        // Scene setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Lighting
+        const light = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(light);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(1, 1, 1).normalize();
+        scene.add(directionalLight);
+
+        // Player setup
+        const playerGeometry = new THREE.BoxGeometry(1, 1, 1);
+        const playerMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+        const player = new THREE.Mesh(playerGeometry, playerMaterial);
+        player.position.z = 5;
+        scene.add(player);
+
+        // Bullets
+        const bullets = [];
+
+        function shootBullet() {
+            const bulletGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+            const bulletMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+            const bullet = new THREE.Mesh(bulletGeometry, bulletMaterial);
+            bullet.position.set(player.position.x, player.position.y, player.position.z);
+            bullets.push(bullet);
+            scene.add(bullet);
+        }
+
+        // Enemies
+        const enemies = [];
+        let score = 0;
+
+        function spawnEnemy() {
+            const enemyGeometry = new THREE.BoxGeometry(1, 1, 1);
+            const enemyMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+            const enemy = new THREE.Mesh(enemyGeometry, enemyMaterial);
+            enemy.position.set((Math.random() - 0.5) * 10, (Math.random() - 0.5) * 10, -10);
+            enemies.push(enemy);
+            scene.add(enemy);
+        }
+
+        setInterval(spawnEnemy, 2000);
+
+        // Controls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enablePan = false;
+        controls.enableZoom = false;
+
+        camera.position.z = 10;
+
+        // Game loop
+        function updateGame() {
+            bullets.forEach((bullet, index) => {
+                bullet.position.z -= 0.2;
+
+                // Remove bullet if out of bounds
+                if (bullet.position.z < -20) {
+                    scene.remove(bullet);
+                    bullets.splice(index, 1);
+                }
+
+                // Check collision with enemies
+                enemies.forEach((enemy, enemyIndex) => {
+                    if (bullet.position.distanceTo(enemy.position) < 0.5) {
+                        scene.remove(enemy);
+                        scene.remove(bullet);
+                        enemies.splice(enemyIndex, 1);
+                        bullets.splice(index, 1);
+                        score += 10;
+                        document.getElementById('score').innerText = `Score: ${score}`;
+                    }
+                });
+            });
+
+            enemies.forEach((enemy, index) => {
+                enemy.position.z += 0.1;
+
+                // Game over if enemy reaches player
+                if (enemy.position.z > player.position.z) {
+                    alert('Game Over!');
+                    document.location.reload();
+                }
+            });
+
+            renderer.render(scene, camera);
+            requestAnimationFrame(updateGame);
+        }
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'ArrowLeft') player.position.x -= 0.5;
+            if (event.key === 'ArrowRight') player.position.x += 0.5;
+            if (event.key === ' ') shootBullet();
+        });
+
+        updateGame();
+    </script>
+</body>
+</html>
